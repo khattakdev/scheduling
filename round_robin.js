@@ -12,7 +12,7 @@ async function init() {
     "-",
     chalk.red("Without Arrival Time")
   );
-  const burstTimes = [24, 3, 3];
+  const burstTimes = [];
   const ganttChart = [];
   const turnAroundTime = [];
   const waitingTime = [];
