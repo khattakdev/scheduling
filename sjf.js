@@ -8,7 +8,7 @@ init();
 async function init() {
   console.clear();
   console.log(
-    chalk.blue.bold("Priority CPU Scheduling")
+    chalk.blue.bold("Shortest Job First CPU Scheduling")
     // "-",
     // chalk.red("Without Arrival Time")
   );
