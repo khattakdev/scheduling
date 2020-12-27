@@ -101,7 +101,7 @@ function fcfs(processTimes, hasPriority) {
         processTimes[i].process,
         processTimes[i].burstTime,
         processTimes[i].arrivalTime,
-        processTimes[i].priority,
+        processTimes[i].priority || "--",
         completionTime,
         turnAroundTime[i],
         waitingTime[i],
