@@ -1,5 +1,4 @@
 const prompt = require("prompt");
-const Table = require("cli-table");
 const chalk = require("chalk");
 const { fcfs, sortWithProp } = require("./utils");
 prompt.start();
@@ -15,74 +14,42 @@ async function init() {
   );
 
   let processTimes = [];
-  const turnAroundTime = [];
-  const waitingTime = [];
-  let averageTAT = 0,
-    averageWT = 0;
 
-  const initialInput = await prompt.get(["processors"]);
+  const initialInput = await prompt.get(["processors", "Arrival Time(Y/N)"]);
   const processors = Number(initialInput.processors);
-  //   const arrivalInput = initialInput[Object.keys(initialInput)[1]];
-  //   const isWithArrivalTime = Boolean(arrivalInput.match(/Y/gi));
+  const arrivalInput = initialInput[Object.keys(initialInput)[1]];
+  const isWithArrivalTime = Boolean(arrivalInput.match(/Y/gi));
 
   // Take Burst Times
   for (let i = 0; i < processors; i++) {
-    const getInput = await prompt.get([`Burst Time of P${i + 1}`]);
+    const getInput = await prompt.get([
+      `Burst Time of P${i + 1}`,
+      `Priority of P${i + 1}`,
+    ]);
+
     processTimes[i] = {
-      Process: `P${i + 1}`, // This will help to recognize which process is this after sorting
+      process: `P${i + 1}`, // This will help to recognize which process is this after sorting
       burstTime: Number(getInput[Object.keys(getInput)[0]]),
-      priority: 0,
+      priority: Number(getInput[Object.keys(getInput)[1]]),
+      arrivalTime: 0,
     };
   }
 
   // Take Arrival Times
-  if (true) {
+  if (isWithArrivalTime) {
     for (let i = 0; i < processors; i++) {
       const getInput = await prompt.get([`Arrival Time Time of P${i + 1}`]);
-      processTimes[i].priority = Number(getInput[Object.keys(getInput)[0]]);
+      processTimes[i].arrivalTime = Number(getInput[Object.keys(getInput)[0]]);
     }
-
-    processTimes = sortWithProp(processTimes);
+    processTimes = sortForPriority(processTimes);
+  } else {
+    processTimes = sortWithProp(processTimes, ["priority"], false);
   }
 
-  const ganttChartTable = new Table({
-    head: ["Processor", "Timing"],
-  });
-  const processTable = new Table({
-    head: [
-      "Processor",
-      "Burst Time",
-      "Arrival Time",
-      "Completion Time",
-      "Turn Around Time",
-      "Waiting Time",
-    ],
-  });
-
-  let completionTime = 0;
-  for (let i = 0; i < processTimes.length; i++) {
-    waitingTime[i] = completionTime - processTimes[i].priority;
-    completionTime += processTimes[i].burstTime;
-    turnAroundTime[i] = waitingTime[i] + processTimes[i].burstTime;
-    averageTAT += turnAroundTime[i];
-    averageWT += waitingTime[i];
-
-    ganttChartTable.push([`P${i + 1}`, completionTime]);
-    processTable.push([
-      `P${i + 1}`,
-      processTimes[i].burstTime,
-      processTimes[i].priority,
-      completionTime,
-      turnAroundTime[i],
-      waitingTime[i],
-    ]);
-  }
-
-  averageTAT /= processTimes.length;
-  averageTAT = averageTAT.toFixed(2);
-
-  averageWT /= processTimes.length;
-  averageWT = averageWT.toFixed(2);
+  const { averageTAT, averageWT, ganttChartTable, processTable } = fcfs(
+    processTimes,
+    true
+  );
 
   console.log(chalk.red.bold("Gantt Chart"));
   console.log(ganttChartTable.toString());
@@ -94,4 +61,43 @@ async function init() {
   console.log(chalk.green("Average WT: "), averageWT);
 }
 
-function withOutArrivalTime() {}
+function merge(left, right) {
+  let arr = [];
+  // Break out of loop if any one of the array gets empty
+  while (left.length && right.length) {
+    // Pick the smaller among the smallest element of left and right sub arrays
+    if (left[0].arrivalTime == right[0].arrivalTime) {
+      if (left[0].priority == right[0].priority) {
+        if (left[0].process > right[0].process) {
+          arr.push(left.shift());
+        } else {
+          arr.push(right.shift());
+        }
+      } else if (left[0].priority > right[0].priority) {
+        arr.push(left.shift());
+      } else {
+        arr.push(right.shift());
+      }
+    } else if (left[0].arrivalTime < right[0].arrivalTime) {
+      arr.push(left.shift());
+    } else {
+      arr.push(right.shift());
+    }
+  }
+
+  // Concatenating the leftover elements
+  // (in case we didn't go through the entire left or right array)
+  return [...arr, ...left, ...right];
+}
+
+function sortForPriority(array) {
+  const half = array.length / 2;
+
+  // Base case or terminating case
+  if (array.length < 2) {
+    return array;
+  }
+
+  const left = array.splice(0, half);
+  return merge(sortForPriority(left), sortForPriority(array));
+}

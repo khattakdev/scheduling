@@ -37,7 +37,7 @@ async function init() {
       processTimes[i].arrivalTime = Number(getInput[Object.keys(getInput)[0]]);
     }
 
-    processTimes = sortWithProp(processTimes, "arrivalTime", true);
+    processTimes = sortWithProp(processTimes, ["arrivalTime"], true);
   }
 
   const { averageTAT, averageWT, ganttChartTable, processTable } = fcfs(

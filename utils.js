@@ -1,18 +1,18 @@
 const Table = require("cli-table");
 
-function merge(left, right, prop, isAscending) {
+function merge(left, right, props, isAscending) {
   let arr = [];
   // Break out of loop if any one of the array gets empty
   while (left.length && right.length) {
     // Pick the smaller among the smallest element of left and right sub arrays
     if (isAscending) {
-      if (left[0][prop] < right[0][prop]) {
+      if (left[0][props[0]] < right[0][props[0]]) {
         arr.push(left.shift());
       } else {
         arr.push(right.shift());
       }
     } else {
-      if (left[0][prop] > right[0][prop]) {
+      if (left[0][props[0]] > right[0][props[0]]) {
         arr.push(left.shift());
       } else {
         arr.push(right.shift());
@@ -25,7 +25,7 @@ function merge(left, right, prop, isAscending) {
   return [...arr, ...left, ...right];
 }
 
-function sortWithProp(array, prop, isAscending) {
+function sortWithProp(array, props, isAscending) {
   const half = array.length / 2;
 
   // Base case or terminating case
@@ -35,9 +35,9 @@ function sortWithProp(array, prop, isAscending) {
 
   const left = array.splice(0, half);
   return merge(
-    sortWithProp(left, prop, isAscending),
-    sortWithProp(array, prop, isAscending),
-    prop,
+    sortWithProp(left, props, isAscending),
+    sortWithProp(array, props, isAscending),
+    props,
     isAscending
   );
 }
@@ -74,8 +74,13 @@ function fcfs(processTimes, hasPriority) {
       ],
     });
   }
-
   let completionTime = 0;
+  for (let i = 0; i < processTimes.length; i++) {
+    completionTime += processTimes[i].burstTime;
+    ganttChartTable.push([processTimes[i].process, completionTime]);
+  }
+  processTimes = sortWithProp(processTimes, ["process"], true);
+  completionTime = 0;
   for (let i = 0; i < processTimes.length; i++) {
     waitingTime[i] = completionTime - processTimes[i].arrivalTime;
     completionTime += processTimes[i].burstTime;
@@ -83,7 +88,6 @@ function fcfs(processTimes, hasPriority) {
     averageTAT += turnAroundTime[i];
     averageWT += waitingTime[i];
 
-    ganttChartTable.push([processTimes[i].process, completionTime]);
     let processRow = [
       processTimes[i].process,
       processTimes[i].burstTime,
