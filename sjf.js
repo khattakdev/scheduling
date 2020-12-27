@@ -40,7 +40,7 @@ async function init() {
     }
   }
 
-  processTimes = sortWithProp(processTimes, ["burstTime"], true);
+  processTimes = sortforSJF(processTimes, ["burstTime"], true);
 
   const clonedProcessTimes = [];
 
@@ -74,4 +74,45 @@ async function init() {
 
   console.log(chalk.green("Average TAT: "), averageTAT);
   console.log(chalk.green("Average WT: "), averageWT);
+}
+
+function merge(left, right) {
+  let arr = [];
+  // Break out of loop if any one of the array gets empty
+  while (left.length && right.length) {
+    // Pick the smaller among the smallest element of left and right sub arrays
+    if (left[0].burstTime == right[0].burstTime) {
+      if (left[0].arrivalTime == right[0].arrivalTime) {
+        if (left[0].process > right[0].process) {
+          arr.push(left.shift());
+        } else {
+          arr.push(right.shift());
+        }
+      } else if (left[0].arrivalTime < right[0].arrivalTime) {
+        arr.push(left.shift());
+      } else {
+        arr.push(right.shift());
+      }
+    } else if (left[0].burstTime < right[0].burstTime) {
+      arr.push(left.shift());
+    } else {
+      arr.push(right.shift());
+    }
+  }
+
+  // Concatenating the leftover elements
+  // (in case we didn't go through the entire left or right array)
+  return [...arr, ...left, ...right];
+}
+
+function sortforSJF(array) {
+  const half = array.length / 2;
+
+  // Base case or terminating case
+  if (array.length < 2) {
+    return array;
+  }
+
+  const left = array.splice(0, half);
+  return merge(sortforSJF(left), sortforSJF(array));
 }
