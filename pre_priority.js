@@ -5,30 +5,63 @@ const { fcfs, sortWithProp } = require("./utils");
 prompt.start();
 
 init();
+
 async function init() {
   console.clear();
-  console.log(chalk.blue.bold("Shortest Remaining Job CPU Scheduling"));
+  console.log(
+    chalk.blue.bold("Priority CPU Scheduling")
+    // "-",
+    // chalk.red("Without Arrival Time")
+  );
 
-  let processTimes = [];
-
-  const completionTimes = [];
-  const burstTimes = [];
+  let processTimes = [
+    // {
+    //   process: "P1",
+    //   arrivalTime: 0,
+    //   burstTime: 5,
+    //   priority: 10,
+    // },
+    // {
+    //   process: "P2",
+    //   arrivalTime: 1,
+    //   burstTime: 4,
+    //   priority: 20,
+    // },
+    // {
+    //   process: "P3",
+    //   arrivalTime: 2,
+    //   burstTime: 2,
+    //   priority: 30,
+    // },
+    // {
+    //   process: "P4",
+    //   arrivalTime: 4,
+    //   burstTime: 1,
+    //   priority: 40,
+    // },
+  ];
+  let completionTimes = [];
+  let burstTimes = [];
+  let remainingBurstTimes = 0;
+  let averageTAT = 0;
   const initialInput = await prompt.get(["processors", "Arrival Time(Y/N)"]);
   const processors = Number(initialInput.processors);
   const arrivalInput = initialInput[Object.keys(initialInput)[1]];
   const isWithArrivalTime = Boolean(arrivalInput.match(/Y/gi));
-  let averageTAT = 0;
 
-  let remainingBurstTimes = 0;
   // Take Burst Times
   for (let i = 0; i < processors; i++) {
-    const getInput = await prompt.get([`Burst Time of P${i + 1}`]);
+    const getInput = await prompt.get([
+      `Burst Time of P${i + 1}`,
+      `Priority of P${i + 1}`,
+    ]);
 
     processTimes[i] = {
       process: `P${i + 1}`, // This will help to recognize which process is this after sorting
       burstTime: Number(getInput[Object.keys(getInput)[0]]),
-      arrivalTime: 0,
+      priority: Number(getInput[Object.keys(getInput)[1]]),
       index: i,
+      arrivalTime: 0,
     };
     completionTimes[i] = 0;
     burstTimes[i] = Number(getInput[Object.keys(getInput)[0]]);
@@ -41,13 +74,10 @@ async function init() {
       const getInput = await prompt.get([`Arrival Time Time of P${i + 1}`]);
       processTimes[i].arrivalTime = Number(getInput[Object.keys(getInput)[0]]);
     }
+    processTimes = sortForPriority(processTimes);
+  } else {
+    processTimes = sortWithProp(processTimes, ["priority"], false);
   }
-
-  // Sort it Based on burstTime
-  processTimes = sortforSJF(processTimes);
-
-  const readyQueue = [];
-  const clonedProcessTimes = [...processTimes];
 
   const ganttChartTable = new Table({
     head: ["Processor", "Timing"],
@@ -68,11 +98,11 @@ async function init() {
     let processToPush = undefined;
     for (let i = 0; i < processTimes.length; i++) {
       // Ignore if the Process has been executed
-      if (clonedProcessTimes[i].burstTime <= 0) continue;
+      if (processTimes[i].burstTime <= 0) continue;
 
-      if (tempCT >= clonedProcessTimes[i].arrivalTime) {
+      if (tempCT >= processTimes[i].arrivalTime) {
         const newProcess = {
-          ...clonedProcessTimes[i],
+          ...processTimes[i],
           //   arrivalTime: tempCT,
           processIndex: i,
         };
@@ -80,21 +110,14 @@ async function init() {
         if (!processToPush) {
           tempCT++;
           processToPush = newProcess;
-          // If previously process was pushed, and we find another one with same or less burst Time && less Arrival Time, Replace it
-        } else if (
-          processToPush.arrivalTime > clonedProcessTimes[i].arrivalTime &&
-          processToPush.burstTime >= clonedProcessTimes[i].burstTime
-        ) {
-          processToPush = newProcess;
         }
       }
     }
     // Push the Temporary Saved Process
     if (processToPush) {
       processToPush.arrivalTime = tempCT;
-      readyQueue.push(processToPush);
-      clonedProcessTimes[processToPush.processIndex].burstTime -= 1;
-      if (clonedProcessTimes[processToPush.processIndex].burstTime == 0) {
+      processTimes[processToPush.processIndex].burstTime -= 1;
+      if (processTimes[processToPush.processIndex].burstTime == 0) {
         remainingBurstTimes--;
       }
       completionTimes[processToPush.processIndex] = tempCT;
@@ -126,9 +149,6 @@ async function init() {
     ]);
   }
 
-  averageTAT /= processTimes.length;
-  averageTAT = averageTAT.toFixed(2);
-
   console.log(chalk.red.bold("Gantt Chart"));
   console.log(ganttChartTable.toString());
 
@@ -143,7 +163,7 @@ function merge(left, right) {
   // Break out of loop if any one of the array gets empty
   while (left.length && right.length) {
     // Pick the smaller among the smallest element of left and right sub arrays
-    if (left[0].burstTime == right[0].burstTime) {
+    if (left[0].priority == right[0].priority) {
       if (left[0].arrivalTime == right[0].arrivalTime) {
         if (left[0].process > right[0].process) {
           arr.push(left.shift());
@@ -155,7 +175,7 @@ function merge(left, right) {
       } else {
         arr.push(right.shift());
       }
-    } else if (left[0].burstTime < right[0].burstTime) {
+    } else if (left[0].priority > right[0].priority) {
       arr.push(left.shift());
     } else {
       arr.push(right.shift());
@@ -167,7 +187,7 @@ function merge(left, right) {
   return [...arr, ...left, ...right];
 }
 
-function sortforSJF(array) {
+function sortForPriority(array) {
   const half = array.length / 2;
 
   // Base case or terminating case
@@ -176,5 +196,5 @@ function sortforSJF(array) {
   }
 
   const left = array.splice(0, half);
-  return merge(sortforSJF(left), sortforSJF(array));
+  return merge(sortForPriority(left), sortForPriority(array));
 }
