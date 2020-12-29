@@ -74,10 +74,11 @@ async function init() {
       const getInput = await prompt.get([`Arrival Time Time of P${i + 1}`]);
       processTimes[i].arrivalTime = Number(getInput[Object.keys(getInput)[0]]);
     }
-    processTimes = sortForPriority(processTimes);
-  } else {
-    processTimes = sortWithProp(processTimes, ["priority"], false);
   }
+  processTimes = sortForPriority(processTimes);
+  // else {
+  //   processTimes = sortWithProp(processTimes, ["priority"], false);
+  // }
 
   const ganttChartTable = new Table({
     head: ["Processor", "Timing"],

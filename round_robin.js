@@ -1,6 +1,7 @@
 const prompt = require("prompt");
 const Table = require("cli-table");
 const chalk = require("chalk");
+const { sortWithProp } = require("./utils");
 prompt.start();
 
 init();
@@ -8,55 +9,96 @@ init();
 async function init() {
   console.clear();
   console.log(
-    chalk.blue.bold("Round Robin"),
-    "-",
-    chalk.red("Without Arrival Time")
+    chalk.blue.bold("Round Robin")
+    // "-",
+    // chalk.red("Without Arrival Time")
   );
-  const burstTimes = [];
+  let burstTimes = [];
+  let processTimes = [];
+  //   {
+  //     process: "P1",
+  //     burstTime: 2,
+  //     arrivalTime: 0,
+  //   },
+  //   {
+  //     process: "P2",
+  //     burstTime: 3,
+  //     arrivalTime: 0,
+  //   },
+  //   {
+  //     process: "P3",
+  //     burstTime: 4,
+  //     arrivalTime: 0,
+  //   },
+  // ];
+  let remainigBurstTimes = 0;
+  const quantum = 3;
   const ganttChart = [];
   const turnAroundTime = [];
   const waitingTime = [];
   let averageTAT = 0,
     averageWT = 0;
   let isRemaining = true;
-  let isCompleted = false;
-  const initialInput = await prompt.get(["processors", "quantum"]);
+  const initialInput = await prompt.get([
+    "processors",
+    "quantum",
+    "Arrival Time(Y/N)",
+  ]);
   const processors = Number(initialInput.processors);
   const quantum = Number(initialInput.quantum);
+  const arrivalInput = initialInput[Object.keys(initialInput)[2]];
+  const isWithArrivalTime = Boolean(arrivalInput.match(/Y/gi));
 
   for (let i = 0; i < processors; i++) {
     const getInput = await prompt.get([`Burst Time of P${i + 1}`]);
     burstTimes[i] = Number(getInput[Object.keys(getInput)[0]]);
+    processTimes[i] = {
+      process: `P${i + 1}`, // This will help to recognize which process is this after sorting
+      burstTime: Number(getInput[Object.keys(getInput)[0]]),
+      arrivalTime: 0,
+      index: i,
+    };
+    remainigBurstTimes++;
   }
 
-  const cloneBurstTimes = [...burstTimes];
-
-  while (isRemaining) {
-    isRemaining = false;
-    for (let i = 0; i < burstTimes.length; i++) {
-      if (burstTimes[i] < 1) continue;
-      let currVal = quantum;
-      if (burstTimes[i] <= quantum) {
-        currVal = burstTimes[i];
-        isCompleted = true;
-      }
-      if (burstTimes[i] > quantum) {
-        isRemaining = true;
-        isCompleted = false;
-      }
-      burstTimes[i] = burstTimes[i] - quantum;
-      ganttChart.push({
-        Processor: `P${i + 1}`,
-        value: currVal,
-        isCompleted,
-        process: i,
-      });
+  if (isWithArrivalTime) {
+    for (let i = 0; i < processors; i++) {
+      const getInput = await prompt.get([`Arrival Time Time of P${i + 1}`]);
+      processTimes[i].arrivalTime = Number(getInput[Object.keys(getInput)[0]]);
     }
+    processTimes = sortWithProp(processTimes, ["arrivalTime"], false);
   }
-  console.log();
   const ganttChartTable = new Table({
     head: ["Processor", "Timing"],
   });
+  const cloneBurstTimes = [...burstTimes];
+  let tempCT = 0;
+  while (remainigBurstTimes) {
+    let processToPush = undefined;
+    for (let i = 0; i < processTimes.length; i++) {
+      if (processTimes[i].burstTime <= 0) continue;
+      // Check if the Process has been arrived
+      if (processTimes[i].arrivalTime <= tempCT) {
+        processToPush = {
+          ...processTimes[i],
+          processIndex: i,
+        };
+        processTimes[i].burstTime -= quantum;
+        if (processTimes[i].burstTime <= 0) {
+          remainigBurstTimes -= 1;
+        }
+        break;
+      }
+    }
+    if (processToPush) {
+      tempCT += quantum;
+      ganttChartTable.push([processToPush.process, tempCT]);
+    } else {
+      tempCT++;
+      ganttChartTable.push(["--", tempCT]);
+    }
+  }
+
   const processTable = new Table({
     head: ["Processor", "Completion Time", "Turn Around Time", "Waiting Time"],
   });
@@ -122,5 +164,30 @@ P3 -> 11
 
 Turn Around Time = Completion Time - Arrival Time
 Waiting Time = Turn Around Time - Burst Time
+
+
+while (isRemaining) {
+    isRemaining = false;
+    for (let i = 0; i < burstTimes.length; i++) {
+      if (burstTimes[i] < 1) continue;
+      let currVal = quantum;
+      if (burstTimes[i] <= quantum) {
+        currVal = burstTimes[i];
+        isCompleted = true;
+      }
+      if (burstTimes[i] > quantum) {
+        isRemaining = true;
+        isCompleted = false;
+      }
+      burstTimes[i] = burstTimes[i] - quantum;
+      ganttChart.push({
+        Processor: `P${i + 1}`,
+        value: currVal,
+        isCompleted,
+        process: i,
+      });
+    }
+  }
+  console.log();
 
 */
